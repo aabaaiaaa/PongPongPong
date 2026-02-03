@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>4-Player Pong</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="container">
+        <h1>4-Player Pong</h1>
+
+        <!-- Lobby Screen -->
+        <div id="lobby" class="screen">
+            <div class="lobby-content">
+                <h2>Game Lobby</h2>
+                <div id="nameInputSection">
+                    <input type="text" id="playerName" placeholder="Enter your name" maxlength="15">
+                    <button id="joinBtn">Join Game</button>
+                </div>
+                <div id="waitingSection" style="display: none;">
+                    <p id="yourPosition"></p>
+                    <h3>Players in Lobby:</h3>
+                    <div id="playerList"></div>
+                    <p id="waitingMessage">Waiting for host to start the game...</p>
+                    <button id="startBtn" style="display: none;">Start Game</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Game Screen -->
+        <div id="game" class="screen" style="display: none;">
+            <div id="gameContainer">
+                <div id="scoreBoard">
+                    <div class="score-item" id="score-top"></div>
+                    <div class="score-item" id="score-bottom"></div>
+                    <div class="score-item" id="score-left"></div>
+                    <div class="score-item" id="score-right"></div>
+                </div>
+                <div id="canvasWrapper">
+                    <canvas id="gameCanvas" width="800" height="600"></canvas>
+                    <div id="controls">
+                        <p id="controlsText"></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- End Game Screen -->
+        <div id="endGame" class="screen" style="display: none;">
+            <h2>Game Over!</h2>
+            <div id="finalScores"></div>
+            <div id="winnerAnnouncement"></div>
+            <button id="lobbyBtn" style="display: none;">Return to Lobby</button>
+            <p id="waitingForHostMessage" style="display: none;">Waiting for host to return to lobby...</p>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="game.js"></script>
+</body>
+</html>
