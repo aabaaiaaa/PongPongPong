@@ -74,6 +74,116 @@ h2 {
     background: rgba(244, 67, 54, 0.4);
 }
 
+/* Role Selection */
+.role-content {
+    padding: 20px;
+}
+
+.role-subtitle {
+    font-size: 1.1em;
+    opacity: 0.85;
+    margin-bottom: 30px;
+}
+
+.role-options {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+}
+
+.role-btn {
+    padding: 15px 40px;
+    font-size: 1.2em;
+}
+
+#hostGameBtn {
+    min-width: 220px;
+}
+
+.role-divider {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    width: 100%;
+    max-width: 300px;
+    opacity: 0.6;
+    font-size: 0.95em;
+}
+
+.role-divider::before,
+.role-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: rgba(255, 255, 255, 0.4);
+}
+
+.join-input-group {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+#roomCodeInput {
+    padding: 12px 16px;
+    font-size: 1.4em;
+    font-weight: bold;
+    text-align: center;
+    letter-spacing: 0.3em;
+    border: 2px solid rgba(255, 255, 255, 0.4);
+    border-radius: 12px;
+    width: 140px;
+    color: #fff;
+    background: rgba(255, 255, 255, 0.15);
+    text-transform: uppercase;
+}
+
+#roomCodeInput::placeholder {
+    color: rgba(255, 255, 255, 0.4);
+    letter-spacing: 0.3em;
+}
+
+#roomCodeInput:focus {
+    outline: none;
+    border-color: rgba(255, 255, 255, 0.8);
+    background: rgba(255, 255, 255, 0.2);
+}
+
+#roomCodeInput.input-error {
+    border-color: #f5576c;
+    animation: shake 0.4s;
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-6px); }
+    75% { transform: translateX(6px); }
+}
+
+/* Room Code Display */
+#roomCodeSection {
+    margin-bottom: 20px;
+}
+
+.room-code-label {
+    font-size: 0.95em;
+    opacity: 0.7;
+    margin-bottom: 8px;
+}
+
+.room-code {
+    font-size: 3em;
+    font-weight: bold;
+    letter-spacing: 0.4em;
+    padding: 15px 25px;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 15px;
+    display: inline-block;
+    font-family: 'Courier New', monospace;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+}
+
 /* Lobby Styles */
 .lobby-content {
     padding: 20px;
@@ -84,6 +194,7 @@ h2 {
     flex-wrap: wrap;
     justify-content: center;
     gap: 10px;
+    margin-top: 20px;
 }
 
 #nameInputSection input {
@@ -147,14 +258,16 @@ button:active {
 
 /* QR Code Section */
 #qrSection {
-    margin-top: 25px;
+    margin-top: 15px;
+    margin-bottom: 10px;
     padding: 20px;
     background: rgba(255, 255, 255, 0.1);
     border-radius: 15px;
 }
 
-#qrSection h3 {
-    margin-bottom: 15px;
+#qrSection p {
+    margin-bottom: 10px;
+    opacity: 0.85;
 }
 
 #qrCode {
@@ -165,7 +278,7 @@ button:active {
     margin-bottom: 10px;
 }
 
-#qrCode canvas {
+#qrCode img {
     display: block;
 }
 
@@ -351,6 +464,20 @@ button:active {
         margin-bottom: 10px;
     }
 
+    .role-content {
+        padding: 10px;
+    }
+
+    .role-subtitle {
+        font-size: 1em;
+        margin-bottom: 20px;
+    }
+
+    .room-code {
+        font-size: 2.2em;
+        padding: 12px 20px;
+    }
+
     .lobby-content {
         padding: 10px;
     }
@@ -440,6 +567,6 @@ button:active {
 
     #qrSection {
         padding: 15px;
-        margin-top: 15px;
+        margin-top: 10px;
     }
 }

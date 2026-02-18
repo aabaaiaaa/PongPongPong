@@ -11,31 +11,58 @@
         <h1>4-Player Pong</h1>
 
         <!-- Connection Status -->
-        <div id="connectionStatus" class="connection-status">Connecting...</div>
+        <div id="connectionStatus" class="connection-status">Ready</div>
+
+        <!-- Role Selection Screen -->
+        <div id="roleSelect" class="screen">
+            <div class="role-content">
+                <h2>Multiplayer Pong</h2>
+                <p class="role-subtitle">Up to 4 players &mdash; one on each side!</p>
+                <div class="role-options">
+                    <button id="hostGameBtn" class="role-btn">Host Game</button>
+                    <div class="role-divider"><span>or join a friend</span></div>
+                    <div class="join-input-group">
+                        <input type="text" id="roomCodeInput" placeholder="ABCD" maxlength="4" autocomplete="off" spellcheck="false">
+                        <button id="joinGameBtn" class="role-btn">Join</button>
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <!-- Lobby Screen -->
-        <div id="lobby" class="screen">
+        <div id="lobby" class="screen" style="display: none;">
             <div class="lobby-content">
                 <h2>Game Lobby</h2>
+
+                <!-- Room Code (host only) -->
+                <div id="roomCodeSection" style="display: none;">
+                    <p class="room-code-label">Room Code</p>
+                    <div id="roomCodeDisplay" class="room-code"></div>
+                </div>
+
+                <!-- QR Code Section (host only) -->
+                <div id="qrSection" style="display: none;">
+                    <p>Scan to join:</p>
+                    <div id="qrCode"></div>
+                    <div class="join-url-section">
+                        <p id="joinUrl" class="join-url"></p>
+                        <button id="copyUrlBtn">Copy Link</button>
+                    </div>
+                </div>
+
+                <!-- Name Input -->
                 <div id="nameInputSection">
                     <input type="text" id="playerName" placeholder="Enter your name" maxlength="15">
-                    <button id="joinBtn">Join Game</button>
+                    <button id="joinBtn">Enter Game</button>
                 </div>
+
+                <!-- Waiting Section (shown after player joins) -->
                 <div id="waitingSection" style="display: none;">
                     <p id="yourPosition"></p>
                     <h3>Players in Lobby:</h3>
                     <div id="playerList"></div>
                     <p id="waitingMessage">Waiting for host to start the game...</p>
                     <button id="startBtn" style="display: none;">Start Game</button>
-                    <!-- QR Code Section (host only) -->
-                    <div id="qrSection" style="display: none;">
-                        <h3>Scan to Join:</h3>
-                        <div id="qrCode"></div>
-                        <div class="join-url-section">
-                            <p id="joinUrl" class="join-url"></p>
-                            <button id="copyUrlBtn">Copy Link</button>
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>
@@ -76,7 +103,7 @@
     </div>
 
     <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
     <script src="game.js"></script>
 </body>
 </html>

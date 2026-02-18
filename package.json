@@ -4,5 +4,13 @@
   "description": "Multiplayer ping pong game with up to 4 players - WebRTC P2P, no server required",
   "keywords": ["game", "multiplayer", "pong", "webrtc"],
   "author": "",
-  "license": "MIT"
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "lint": "eslint public/**/*.js"
+  },
+  "devDependencies": {
+    "eslint": "^9.0.0",
+    "globals": "^16.0.0"
+  }
 }

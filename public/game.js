@@ -1,52 +1,75 @@
-// ---- Role Detection ----
-const params = new URLSearchParams(window.location.search);
-const hostPeerId = params.get('join');
-const isHostRole = !hostPeerId;
+(function() {
+"use strict";
 
-let peer = null;
-let connections = {}; // peerId -> DataConnection (host only)
-let hostConn = null;  // DataConnection to host (joiner only)
+// ---- Configuration ----
+var PEER_PREFIX = 'pong-';
+var GITHUB_PAGES_URL = 'https://aabaaiaaa.github.io/PongPongPong/';
+var COLORS = ['#FF6B6B', '#4ECDC4', '#FFE66D', '#95E1D3'];
+var POSITIONS = ['top', 'bottom', 'left', 'right'];
 
-let gameState = null;
-let myPosition = null;
-let myPeerId = null;
-let gameLoop = null;
+// ---- URL Params ----
+var params = new URLSearchParams(window.location.search);
+var joinParam = params.get('join');
 
-const COLORS = ['#FF6B6B', '#4ECDC4', '#FFE66D', '#95E1D3'];
-const POSITIONS = ['top', 'bottom', 'left', 'right'];
+// ---- State ----
+var isHostRole = false;
+var roomCode = null;
+var peer = null;
+var connections = {};
+var hostConn = null;
+var gameState = null;
+var myPosition = null;
+var myPeerId = null;
+var gameLoop = null;
 
 // ---- DOM Elements ----
-const lobbyScreen = document.getElementById('lobby');
-const gameScreen = document.getElementById('game');
-const endGameScreen = document.getElementById('endGame');
+var roleSelectScreen = document.getElementById('roleSelect');
+var lobbyScreen = document.getElementById('lobby');
+var gameScreen = document.getElementById('game');
+var endGameScreen = document.getElementById('endGame');
 
-const nameInputSection = document.getElementById('nameInputSection');
-const waitingSection = document.getElementById('waitingSection');
-const playerNameInput = document.getElementById('playerName');
-const joinBtn = document.getElementById('joinBtn');
-const startBtn = document.getElementById('startBtn');
-const lobbyBtn = document.getElementById('lobbyBtn');
+var hostGameBtn = document.getElementById('hostGameBtn');
+var joinGameBtn = document.getElementById('joinGameBtn');
+var roomCodeInputEl = document.getElementById('roomCodeInput');
+var roomCodeDisplayEl = document.getElementById('roomCodeDisplay');
+var roomCodeSectionEl = document.getElementById('roomCodeSection');
 
-const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
+var nameInputSection = document.getElementById('nameInputSection');
+var waitingSection = document.getElementById('waitingSection');
+var playerNameInput = document.getElementById('playerName');
+var joinBtn = document.getElementById('joinBtn');
+var startBtn = document.getElementById('startBtn');
+var lobbyBtn = document.getElementById('lobbyBtn');
 
-const yourPositionText = document.getElementById('yourPosition');
-const playerListDiv = document.getElementById('playerList');
-const controlsText = document.getElementById('controlsText');
-const finalScoresDiv = document.getElementById('finalScores');
-const winnerAnnouncementDiv = document.getElementById('winnerAnnouncement');
+var canvas = document.getElementById('gameCanvas');
+var ctx = canvas.getContext('2d');
 
-const connectionStatusEl = document.getElementById('connectionStatus');
-const qrSection = document.getElementById('qrSection');
-const qrCodeEl = document.getElementById('qrCode');
-const joinUrlEl = document.getElementById('joinUrl');
-const touchControlsEl = document.getElementById('touchControls');
+var yourPositionText = document.getElementById('yourPosition');
+var playerListDiv = document.getElementById('playerList');
+var controlsText = document.getElementById('controlsText');
+var finalScoresDiv = document.getElementById('finalScores');
+var winnerAnnouncementDiv = document.getElementById('winnerAnnouncement');
+
+var connectionStatusEl = document.getElementById('connectionStatus');
+var qrSection = document.getElementById('qrSection');
+var qrCodeEl = document.getElementById('qrCode');
+var joinUrlEl = document.getElementById('joinUrl');
+var touchControlsEl = document.getElementById('touchControls');
 
 // ---- Key States ----
-const keys = {};
+var keys = {};
 
 function escapeHTML(str) {
     return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function generateRoomCode() {
+    var chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+    var code = '';
+    for (var i = 0; i < 4; i++) {
+        code += chars[Math.floor(Math.random() * chars.length)];
+    }
+    return code;
 }
 
 // ---- Initialize Game State (used by host) ----
@@ -75,29 +98,53 @@ function createInitialGameState() {
 }
 
 // ---- PeerJS Setup ----
-function initPeer() {
-    peer = new Peer();
+function initAsHost() {
+    isHostRole = true;
+    roomCode = generateRoomCode();
+    setConnectionStatus('Connecting...', '');
+    peer = new Peer(PEER_PREFIX + roomCode);
 
-    peer.on('open', (id) => {
+    peer.on('open', function(id) {
         myPeerId = id;
         setConnectionStatus('Connected', 'connected');
-
-        if (isHostRole) {
-            // Host: initialize game state and listen for joiners
-            gameState = createInitialGameState();
-            generateQRCode(id);
-            peer.on('connection', handleNewConnection);
-        } else {
-            // Joiner: connect to host
-            hostConn = peer.connect(hostPeerId, { reliable: true });
-            setupJoinerConnection(hostConn);
-        }
+        gameState = createInitialGameState();
+        showScreen('lobby');
+        roomCodeDisplayEl.textContent = roomCode;
+        roomCodeSectionEl.style.display = 'block';
+        qrSection.style.display = 'block';
+        generateQRCode();
+        peer.on('connection', handleNewConnection);
     });
 
-    peer.on('error', (err) => {
+    peer.on('error', function(err) {
+        console.error('PeerJS error:', err);
+        if (err.type === 'unavailable-id') {
+            setConnectionStatus('Room code taken, please try again', 'error');
+            showScreen('roleSelect');
+        } else {
+            setConnectionStatus('Connection error', 'error');
+        }
+    });
+}
+
+function initAsJoiner(hostPeerId) {
+    isHostRole = false;
+    setConnectionStatus('Connecting...', '');
+    peer = new Peer();
+
+    peer.on('open', function(id) {
+        myPeerId = id;
+        setConnectionStatus('Connecting to host...', '');
+        hostConn = peer.connect(hostPeerId, { reliable: true });
+        setupJoinerConnection(hostConn);
+    });
+
+    peer.on('error', function(err) {
         console.error('PeerJS error:', err);
         if (err.type === 'peer-unavailable') {
-            setConnectionStatus('Host not found', 'error');
+            setConnectionStatus('Game not found', 'error');
+            peer.destroy();
+            showScreen('roleSelect');
         } else {
             setConnectionStatus('Connection error', 'error');
         }
@@ -110,53 +157,56 @@ function setConnectionStatus(text, className) {
 }
 
 // ---- QR Code Generation ----
-function generateQRCode(peerId) {
-    const joinUrl = window.location.origin + window.location.pathname + '?join=' + peerId;
+function generateQRCode() {
+    var baseUrl;
+    var proto = window.location.protocol;
+    var hostname = window.location.hostname;
+    if (proto === 'file:' || hostname === 'localhost' || hostname === '127.0.0.1') {
+        baseUrl = GITHUB_PAGES_URL;
+    } else {
+        baseUrl = window.location.origin + window.location.pathname;
+    }
+    var joinUrl = baseUrl + '?join=' + PEER_PREFIX + roomCode;
 
-    QRCode.toCanvas(document.createElement('canvas'), joinUrl, {
-        width: 200,
-        margin: 1,
-        color: { dark: '#000', light: '#fff' }
-    }, (err, canvasEl) => {
-        if (err) {
-            console.error('QR code error:', err);
-            return;
-        }
-        qrCodeEl.innerHTML = '';
-        qrCodeEl.appendChild(canvasEl);
-    });
+    // Generate QR code using qrcode-generator
+    var qr = qrcode(0, 'M');
+    qr.addData(joinUrl);
+    qr.make();
+
+    var img = document.createElement('img');
+    img.src = qr.createDataURL(6, 2);
+    img.alt = 'QR Code to join game';
+    qrCodeEl.innerHTML = '';
+    qrCodeEl.appendChild(img);
 
     joinUrlEl.textContent = joinUrl;
 
-    // Copy URL button
-    const copyBtn = document.getElementById('copyUrlBtn');
-    copyBtn.addEventListener('click', () => {
-        navigator.clipboard.writeText(joinUrl).then(() => {
+    var copyBtn = document.getElementById('copyUrlBtn');
+    copyBtn.onclick = function() {
+        navigator.clipboard.writeText(joinUrl).then(function() {
             copyBtn.textContent = 'Copied!';
-            setTimeout(() => { copyBtn.textContent = 'Copy Link'; }, 2000);
-        }).catch(() => {
-            // Fallback: select the URL text
-            const range = document.createRange();
+            setTimeout(function() { copyBtn.textContent = 'Copy Link'; }, 2000);
+        }).catch(function() {
+            var range = document.createRange();
             range.selectNode(joinUrlEl);
             window.getSelection().removeAllRanges();
             window.getSelection().addRange(range);
         });
-    });
+    };
 }
 
 // ---- Host: Handle New Joiner Connection ----
 function handleNewConnection(conn) {
-    conn.on('open', () => {
+    conn.on('open', function() {
         connections[conn.peer] = conn;
 
-        // Send current game state
         conn.send({ type: 'gameState', data: gameState });
 
-        conn.on('data', (msg) => {
+        conn.on('data', function(msg) {
             handleMessageAsHost(conn.peer, msg);
         });
 
-        conn.on('close', () => {
+        conn.on('close', function() {
             handleJoinerDisconnect(conn.peer);
         });
     });
@@ -167,14 +217,8 @@ function handleMessageAsHost(peerId, msg) {
         case 'joinGame':
             hostAddPlayer(peerId, msg.data);
             break;
-        case 'startGame':
-            // Only the host peer can start
-            break;
         case 'paddleMove':
             hostHandlePaddleMove(peerId, msg.data);
-            break;
-        case 'returnToLobby':
-            // Only the host peer can return to lobby
             break;
     }
 }
@@ -194,14 +238,14 @@ function handleJoinerDisconnect(peerId) {
     }
 }
 
-// ---- Host: Game Logic (ported from server.js) ----
+// ---- Host: Game Logic ----
 function hostAddPlayer(peerId, playerName) {
-    const usedPositions = Object.values(gameState.players).map(p => p.position);
-    const availablePosition = POSITIONS.find(pos => !usedPositions.includes(pos));
+    var usedPositions = Object.values(gameState.players).map(function(p) { return p.position; });
+    var availablePosition = POSITIONS.find(function(pos) { return usedPositions.indexOf(pos) === -1; });
 
     if (availablePosition && Object.keys(gameState.players).length < 4) {
-        const usedColors = Object.values(gameState.players).map(p => p.color);
-        const availableColor = COLORS.find(c => !usedColors.includes(c)) || COLORS[0];
+        var usedColors = Object.values(gameState.players).map(function(p) { return p.color; });
+        var availableColor = COLORS.find(function(c) { return usedColors.indexOf(c) === -1; }) || COLORS[0];
 
         gameState.players[peerId] = {
             position: availablePosition,
@@ -212,14 +256,12 @@ function hostAddPlayer(peerId, playerName) {
 
         broadcastGameState();
 
-        // Send player assignment
-        const assignMsg = {
+        var assignMsg = {
             type: 'playerAssigned',
             data: { position: availablePosition }
         };
 
         if (peerId === myPeerId) {
-            // Host self-play
             onPlayerAssigned(assignMsg.data);
         } else if (connections[peerId]) {
             connections[peerId].send(assignMsg);
@@ -234,7 +276,7 @@ function hostAddPlayer(peerId, playerName) {
 }
 
 function hostHandlePaddleMove(peerId, direction) {
-    const player = gameState.players[peerId];
+    var player = gameState.players[peerId];
     if (player && gameState.status === 'playing') {
         gameState.paddles[player.position].moving = direction;
     }
@@ -245,7 +287,7 @@ function hostStartGame() {
 
     gameState.status = 'playing';
 
-    Object.keys(gameState.players).forEach(id => {
+    Object.keys(gameState.players).forEach(function(id) {
         gameState.players[id].score = 0;
     });
 
@@ -272,17 +314,17 @@ function resetBall() {
     gameState.ball.y = gameState.canvasHeight / 2;
     gameState.ball.speed = 5;
 
-    const activePositions = Object.values(gameState.players).map(p => p.position);
+    var activePositions = Object.values(gameState.players).map(function(p) { return p.position; });
 
     if (activePositions.length === 0) {
-        const angle = (Math.random() * Math.PI / 2) - Math.PI / 4 + (Math.floor(Math.random() * 4) * Math.PI / 2);
+        var angle = (Math.random() * Math.PI / 2) - Math.PI / 4 + (Math.floor(Math.random() * 4) * Math.PI / 2);
         gameState.ball.vx = Math.cos(angle) * gameState.ball.speed;
         gameState.ball.vy = Math.sin(angle) * gameState.ball.speed;
         return;
     }
 
-    const targetPosition = activePositions[Math.floor(Math.random() * activePositions.length)];
-    let baseAngle;
+    var targetPosition = activePositions[Math.floor(Math.random() * activePositions.length)];
+    var baseAngle;
     switch (targetPosition) {
         case 'top': baseAngle = -Math.PI / 2; break;
         case 'bottom': baseAngle = Math.PI / 2; break;
@@ -290,18 +332,19 @@ function resetBall() {
         case 'right': baseAngle = 0; break;
     }
 
-    const variance = (Math.random() - 0.5) * (Math.PI / 3);
-    const angle = baseAngle + variance;
+    var variance = (Math.random() - 0.5) * (Math.PI / 3);
+    var finalAngle = baseAngle + variance;
 
-    gameState.ball.vx = Math.cos(angle) * gameState.ball.speed;
-    gameState.ball.vy = Math.sin(angle) * gameState.ball.speed;
+    gameState.ball.vx = Math.cos(finalAngle) * gameState.ball.speed;
+    gameState.ball.vy = Math.sin(finalAngle) * gameState.ball.speed;
 }
 
 function updateGame() {
     if (gameState.status !== 'playing') return;
 
-    // Update paddles
-    Object.entries(gameState.paddles).forEach(([position, paddle]) => {
+    Object.entries(gameState.paddles).forEach(function(entry) {
+        var position = entry[0];
+        var paddle = entry[1];
         if (position === 'top' || position === 'bottom') {
             paddle.x += paddle.moving * gameState.paddleSpeed;
             paddle.x = Math.max(paddle.width / 2, Math.min(gameState.canvasWidth - paddle.width / 2, paddle.x));
@@ -311,7 +354,6 @@ function updateGame() {
         }
     });
 
-    // Update ball position
     gameState.ball.x += gameState.ball.vx;
     gameState.ball.y += gameState.ball.vy;
 
@@ -322,24 +364,24 @@ function updateGame() {
 }
 
 function checkPaddleCollisions() {
-    const ball = gameState.ball;
-    const paddles = gameState.paddles;
-    const currentSpeed = Math.sqrt(ball.vx ** 2 + ball.vy ** 2);
+    var ball = gameState.ball;
+    var paddles = gameState.paddles;
+    var currentSpeed = Math.sqrt(ball.vx * ball.vx + ball.vy * ball.vy);
 
     // Top paddle
     if (ball.vy < 0 && ball.y - ball.radius <= paddles.top.y + paddles.top.height) {
         if (ball.x >= paddles.top.x - paddles.top.width / 2 &&
             ball.x <= paddles.top.x + paddles.top.width / 2) {
-            const hitPosition = (ball.x - paddles.top.x) / (paddles.top.width / 2);
-            const maxAngle = Math.PI / 3;
-            const bounceAngle = hitPosition * maxAngle;
+            var hitPos = (ball.x - paddles.top.x) / (paddles.top.width / 2);
+            var maxAngle = Math.PI / 3;
+            var bounceAngle = hitPos * maxAngle;
             ball.vx = Math.sin(bounceAngle) * currentSpeed;
             ball.vy = Math.abs(Math.cos(bounceAngle) * currentSpeed);
             ball.y = paddles.top.y + paddles.top.height + ball.radius;
 
-            const playerId = Object.keys(gameState.players).find(
-                id => gameState.players[id].position === 'top'
-            );
+            var playerId = Object.keys(gameState.players).find(function(id) {
+                return gameState.players[id].position === 'top';
+            });
             if (playerId) gameState.players[playerId].score++;
             increaseSpeed();
         }
@@ -349,17 +391,17 @@ function checkPaddleCollisions() {
     if (ball.vy > 0 && ball.y + ball.radius >= paddles.bottom.y) {
         if (ball.x >= paddles.bottom.x - paddles.bottom.width / 2 &&
             ball.x <= paddles.bottom.x + paddles.bottom.width / 2) {
-            const hitPosition = (ball.x - paddles.bottom.x) / (paddles.bottom.width / 2);
-            const maxAngle = Math.PI / 3;
-            const bounceAngle = hitPosition * maxAngle;
-            ball.vx = Math.sin(bounceAngle) * currentSpeed;
-            ball.vy = -Math.abs(Math.cos(bounceAngle) * currentSpeed);
+            var hitPosB = (ball.x - paddles.bottom.x) / (paddles.bottom.width / 2);
+            var maxAngleB = Math.PI / 3;
+            var bounceAngleB = hitPosB * maxAngleB;
+            ball.vx = Math.sin(bounceAngleB) * currentSpeed;
+            ball.vy = -Math.abs(Math.cos(bounceAngleB) * currentSpeed);
             ball.y = paddles.bottom.y - ball.radius;
 
-            const playerId = Object.keys(gameState.players).find(
-                id => gameState.players[id].position === 'bottom'
-            );
-            if (playerId) gameState.players[playerId].score++;
+            var playerIdB = Object.keys(gameState.players).find(function(id) {
+                return gameState.players[id].position === 'bottom';
+            });
+            if (playerIdB) gameState.players[playerIdB].score++;
             increaseSpeed();
         }
     }
@@ -368,17 +410,17 @@ function checkPaddleCollisions() {
     if (ball.vx < 0 && ball.x - ball.radius <= paddles.left.x + paddles.left.width) {
         if (ball.y >= paddles.left.y - paddles.left.height / 2 &&
             ball.y <= paddles.left.y + paddles.left.height / 2) {
-            const hitPosition = (ball.y - paddles.left.y) / (paddles.left.height / 2);
-            const maxAngle = Math.PI / 3;
-            const bounceAngle = hitPosition * maxAngle;
-            ball.vx = Math.abs(Math.cos(bounceAngle) * currentSpeed);
-            ball.vy = Math.sin(bounceAngle) * currentSpeed;
+            var hitPosL = (ball.y - paddles.left.y) / (paddles.left.height / 2);
+            var maxAngleL = Math.PI / 3;
+            var bounceAngleL = hitPosL * maxAngleL;
+            ball.vx = Math.abs(Math.cos(bounceAngleL) * currentSpeed);
+            ball.vy = Math.sin(bounceAngleL) * currentSpeed;
             ball.x = paddles.left.x + paddles.left.width + ball.radius;
 
-            const playerId = Object.keys(gameState.players).find(
-                id => gameState.players[id].position === 'left'
-            );
-            if (playerId) gameState.players[playerId].score++;
+            var playerIdL = Object.keys(gameState.players).find(function(id) {
+                return gameState.players[id].position === 'left';
+            });
+            if (playerIdL) gameState.players[playerIdL].score++;
             increaseSpeed();
         }
     }
@@ -387,53 +429,53 @@ function checkPaddleCollisions() {
     if (ball.vx > 0 && ball.x + ball.radius >= paddles.right.x) {
         if (ball.y >= paddles.right.y - paddles.right.height / 2 &&
             ball.y <= paddles.right.y + paddles.right.height / 2) {
-            const hitPosition = (ball.y - paddles.right.y) / (paddles.right.height / 2);
-            const maxAngle = Math.PI / 3;
-            const bounceAngle = hitPosition * maxAngle;
-            ball.vx = -Math.abs(Math.cos(bounceAngle) * currentSpeed);
-            ball.vy = Math.sin(bounceAngle) * currentSpeed;
+            var hitPosR = (ball.y - paddles.right.y) / (paddles.right.height / 2);
+            var maxAngleR = Math.PI / 3;
+            var bounceAngleR = hitPosR * maxAngleR;
+            ball.vx = -Math.abs(Math.cos(bounceAngleR) * currentSpeed);
+            ball.vy = Math.sin(bounceAngleR) * currentSpeed;
             ball.x = paddles.right.x - ball.radius;
 
-            const playerId = Object.keys(gameState.players).find(
-                id => gameState.players[id].position === 'right'
-            );
-            if (playerId) gameState.players[playerId].score++;
+            var playerIdR = Object.keys(gameState.players).find(function(id) {
+                return gameState.players[id].position === 'right';
+            });
+            if (playerIdR) gameState.players[playerIdR].score++;
             increaseSpeed();
         }
     }
 }
 
 function checkBallOut() {
-    const ball = gameState.ball;
-    let scored = false;
+    var ball = gameState.ball;
+    var scored = false;
 
     if (ball.y - ball.radius <= 0) {
-        const hasPlayer = Object.values(gameState.players).some(p => p.position === 'top');
-        if (hasPlayer) {
+        var hasTop = Object.values(gameState.players).some(function(p) { return p.position === 'top'; });
+        if (hasTop) {
             scored = true;
         } else {
             ball.vy = Math.abs(ball.vy);
             ball.y = ball.radius;
         }
     } else if (ball.y + ball.radius >= gameState.canvasHeight) {
-        const hasPlayer = Object.values(gameState.players).some(p => p.position === 'bottom');
-        if (hasPlayer) {
+        var hasBottom = Object.values(gameState.players).some(function(p) { return p.position === 'bottom'; });
+        if (hasBottom) {
             scored = true;
         } else {
             ball.vy = -Math.abs(ball.vy);
             ball.y = gameState.canvasHeight - ball.radius;
         }
     } else if (ball.x - ball.radius <= 0) {
-        const hasPlayer = Object.values(gameState.players).some(p => p.position === 'left');
-        if (hasPlayer) {
+        var hasLeft = Object.values(gameState.players).some(function(p) { return p.position === 'left'; });
+        if (hasLeft) {
             scored = true;
         } else {
             ball.vx = Math.abs(ball.vx);
             ball.x = ball.radius;
         }
     } else if (ball.x + ball.radius >= gameState.canvasWidth) {
-        const hasPlayer = Object.values(gameState.players).some(p => p.position === 'right');
-        if (hasPlayer) {
+        var hasRight = Object.values(gameState.players).some(function(p) { return p.position === 'right'; });
+        if (hasRight) {
             scored = true;
         } else {
             ball.vx = -Math.abs(ball.vx);
@@ -443,7 +485,8 @@ function checkBallOut() {
 
     if (scored) {
         resetBall();
-        const maxScore = Math.max(...Object.values(gameState.players).map(p => p.score));
+        var scores = Object.values(gameState.players).map(function(p) { return p.score; });
+        var maxScore = Math.max.apply(null, scores);
         if (maxScore >= 10) {
             endGame();
         }
@@ -451,10 +494,10 @@ function checkBallOut() {
 }
 
 function increaseSpeed() {
-    const maxSpeed = 10;
-    const currentSpeed = Math.sqrt(gameState.ball.vx ** 2 + gameState.ball.vy ** 2);
+    var maxSpeed = 10;
+    var currentSpeed = Math.sqrt(gameState.ball.vx * gameState.ball.vx + gameState.ball.vy * gameState.ball.vy);
     if (currentSpeed < maxSpeed) {
-        const speedIncrease = 1.05;
+        var speedIncrease = 1.05;
         gameState.ball.vx *= speedIncrease;
         gameState.ball.vy *= speedIncrease;
     }
@@ -469,16 +512,15 @@ function endGame() {
 function hostReturnToLobby() {
     gameState.status = 'lobby';
 
-    Object.keys(gameState.players).forEach(id => {
+    Object.keys(gameState.players).forEach(function(id) {
         gameState.players[id].score = 0;
     });
 
-    // Reset paddles
     gameState.paddles.top.x = 400;
     gameState.paddles.bottom.x = 400;
     gameState.paddles.left.y = 300;
     gameState.paddles.right.y = 300;
-    Object.values(gameState.paddles).forEach(p => p.moving = 0);
+    Object.values(gameState.paddles).forEach(function(p) { p.moving = 0; });
 
     gameState.ball.x = gameState.canvasWidth / 2;
     gameState.ball.y = gameState.canvasHeight / 2;
@@ -494,29 +536,27 @@ function resetGameState() {
 
 // ---- Host: Broadcast to all joiners ----
 function broadcastGameState() {
-    const msg = { type: 'gameState', data: gameState };
-    Object.values(connections).forEach(conn => {
+    var msg = { type: 'gameState', data: gameState };
+    Object.values(connections).forEach(function(conn) {
         if (conn.open) {
             conn.send(msg);
         }
     });
-    // Also update local UI
     updateUI();
 }
 
 // ---- Joiner: Connection Setup ----
 function setupJoinerConnection(conn) {
-    conn.on('open', () => {
+    conn.on('open', function() {
         setConnectionStatus('Connected to host', 'connected');
     });
 
-    conn.on('data', (msg) => {
+    conn.on('data', function(msg) {
         handleMessageAsJoiner(msg);
     });
 
-    conn.on('close', () => {
+    conn.on('close', function() {
         setConnectionStatus('Host disconnected', 'error');
-        // Show a message overlay
         if (gameState && gameState.status === 'playing') {
             gameState.status = 'ended';
             updateUI();
@@ -524,7 +564,7 @@ function setupJoinerConnection(conn) {
         alert('The host has disconnected. The game is over.');
     });
 
-    conn.on('error', (err) => {
+    conn.on('error', function(err) {
         console.error('Connection error:', err);
         setConnectionStatus('Connection error', 'error');
     });
@@ -545,10 +585,9 @@ function handleMessageAsJoiner(msg) {
     }
 }
 
-// ---- Shared: Send messages (abstracts host-self vs network) ----
+// ---- Shared: Send messages ----
 function sendToHost(msg) {
     if (isHostRole) {
-        // Host sending to self — process directly
         handleMessageAsHost(myPeerId, msg);
     } else if (hostConn && hostConn.open) {
         hostConn.send(msg);
@@ -573,44 +612,71 @@ function onPlayerAssigned(data) {
     setupTouchControls();
 }
 
-// ---- Button Event Listeners ----
-joinBtn.addEventListener('click', () => {
-    const name = playerNameInput.value.trim() || 'Player ' + Math.floor(Math.random() * 1000);
+// ---- Role Selection Event Listeners ----
+hostGameBtn.addEventListener('click', function() {
+    initAsHost();
+});
+
+joinGameBtn.addEventListener('click', function() {
+    var code = roomCodeInputEl.value.trim().toUpperCase();
+    if (code.length !== 4) {
+        roomCodeInputEl.classList.add('input-error');
+        roomCodeInputEl.focus();
+        return;
+    }
+    showScreen('lobby');
+    initAsJoiner(PEER_PREFIX + code);
+});
+
+roomCodeInputEl.addEventListener('input', function() {
+    roomCodeInputEl.value = roomCodeInputEl.value.toUpperCase().replace(/[^A-Z]/g, '');
+    roomCodeInputEl.classList.remove('input-error');
+});
+
+roomCodeInputEl.addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        joinGameBtn.click();
+    }
+});
+
+// ---- Lobby Event Listeners ----
+joinBtn.addEventListener('click', function() {
+    var name = playerNameInput.value.trim() || 'Player ' + Math.floor(Math.random() * 1000);
     sendToHost({ type: 'joinGame', data: name });
 });
 
-playerNameInput.addEventListener('keypress', (e) => {
+playerNameInput.addEventListener('keypress', function(e) {
     if (e.key === 'Enter') {
         joinBtn.click();
     }
 });
 
-startBtn.addEventListener('click', () => {
+startBtn.addEventListener('click', function() {
     if (isHostRole) {
         hostStartGame();
     }
 });
 
-lobbyBtn.addEventListener('click', () => {
+lobbyBtn.addEventListener('click', function() {
     if (isHostRole) {
         hostReturnToLobby();
     }
 });
 
 // ---- Prevent mobile scroll/refresh during gameplay ----
-document.addEventListener('touchmove', (e) => {
+document.addEventListener('touchmove', function(e) {
     if (gameState && gameState.status === 'playing') {
         e.preventDefault();
     }
 }, { passive: false });
 
 // ---- Keyboard Controls ----
-document.addEventListener('keydown', (e) => {
+document.addEventListener('keydown', function(e) {
     keys[e.key] = true;
     updatePaddleMovement();
 });
 
-document.addEventListener('keyup', (e) => {
+document.addEventListener('keyup', function(e) {
     keys[e.key] = false;
     updatePaddleMovement();
 });
@@ -618,7 +684,7 @@ document.addEventListener('keyup', (e) => {
 function updatePaddleMovement() {
     if (!myPosition || !gameState || gameState.status !== 'playing') return;
 
-    let direction = 0;
+    var direction = 0;
 
     if (myPosition === 'top' || myPosition === 'bottom') {
         if (keys['ArrowLeft'] || keys['a'] || keys['A']) {
@@ -641,20 +707,18 @@ function updatePaddleMovement() {
 function setupTouchControls() {
     touchControlsEl.style.display = 'flex';
 
-    const touchLeft = document.getElementById('touchLeft');
-    const touchRight = document.getElementById('touchRight');
-    const touchUp = document.getElementById('touchUp');
-    const touchDown = document.getElementById('touchDown');
+    var touchLeft = document.getElementById('touchLeft');
+    var touchRight = document.getElementById('touchRight');
+    var touchUp = document.getElementById('touchUp');
+    var touchDown = document.getElementById('touchDown');
 
     if (myPosition === 'top' || myPosition === 'bottom') {
-        // Horizontal movement: show left/right side by side
         touchControlsEl.classList.remove('vertical');
         touchLeft.style.display = 'flex';
         touchRight.style.display = 'flex';
         touchUp.style.display = 'none';
         touchDown.style.display = 'none';
     } else {
-        // Vertical movement: show up/down stacked vertically
         touchControlsEl.classList.add('vertical');
         touchLeft.style.display = 'none';
         touchRight.style.display = 'none';
@@ -662,31 +726,30 @@ function setupTouchControls() {
         touchDown.style.display = 'flex';
     }
 
-    // Attach touch and mouse events to all buttons
-    [touchLeft, touchRight, touchUp, touchDown].forEach(btn => {
-        const dir = parseInt(btn.dataset.dir);
+    [touchLeft, touchRight, touchUp, touchDown].forEach(function(btn) {
+        var dir = parseInt(btn.dataset.dir);
 
-        btn.addEventListener('touchstart', (e) => {
+        btn.addEventListener('touchstart', function(e) {
             e.preventDefault();
             sendToHost({ type: 'paddleMove', data: dir });
         });
 
-        btn.addEventListener('touchend', (e) => {
+        btn.addEventListener('touchend', function(e) {
             e.preventDefault();
             sendToHost({ type: 'paddleMove', data: 0 });
         });
 
-        btn.addEventListener('touchcancel', (e) => {
+        btn.addEventListener('touchcancel', function(e) {
             e.preventDefault();
             sendToHost({ type: 'paddleMove', data: 0 });
         });
 
-        btn.addEventListener('mousedown', (e) => {
+        btn.addEventListener('mousedown', function(e) {
             e.preventDefault();
             sendToHost({ type: 'paddleMove', data: dir });
         });
 
-        btn.addEventListener('mouseup', (e) => {
+        btn.addEventListener('mouseup', function(e) {
             e.preventDefault();
             sendToHost({ type: 'paddleMove', data: 0 });
         });
@@ -700,7 +763,8 @@ function updateUI() {
     if (gameState.status === 'lobby') {
         showScreen('lobby');
         updatePlayerList();
-        if (isHostRole && myPosition) {
+        if (isHostRole) {
+            roomCodeSectionEl.style.display = 'block';
             qrSection.style.display = 'block';
         }
     } else if (gameState.status === 'playing') {
@@ -715,11 +779,11 @@ function updateUI() {
 }
 
 function showScreen(screenName) {
+    roleSelectScreen.style.display = screenName === 'roleSelect' ? 'block' : 'none';
     lobbyScreen.style.display = screenName === 'lobby' ? 'block' : 'none';
     gameScreen.style.display = screenName === 'game' ? 'block' : 'none';
     endGameScreen.style.display = screenName === 'endGame' ? 'block' : 'none';
 
-    // Lock body scroll during gameplay, allow scrolling in lobby/end screens
     if (screenName === 'game') {
         document.body.classList.add('playing');
     } else {
@@ -730,7 +794,7 @@ function showScreen(screenName) {
 function updatePlayerList() {
     if (!gameState) return;
 
-    const players = Object.values(gameState.players);
+    var players = Object.values(gameState.players);
     playerListDiv.innerHTML = '';
 
     if (players.length === 0) {
@@ -738,8 +802,8 @@ function updatePlayerList() {
         return;
     }
 
-    players.forEach(player => {
-        const playerItem = document.createElement('div');
+    players.forEach(function(player) {
+        var playerItem = document.createElement('div');
         playerItem.className = 'player-item';
         playerItem.innerHTML =
             '<span class="player-color" style="background-color: ' + player.color + '"></span>' +
@@ -769,8 +833,10 @@ function renderGame() {
     ctx.setLineDash([]);
 
     // Draw paddles
-    Object.entries(gameState.paddles).forEach(([position, paddle]) => {
-        const player = Object.values(gameState.players).find(p => p.position === position);
+    Object.entries(gameState.paddles).forEach(function(entry) {
+        var position = entry[0];
+        var paddle = entry[1];
+        var player = Object.values(gameState.players).find(function(p) { return p.position === position; });
         if (!player) return;
 
         ctx.fillStyle = player.color;
@@ -838,11 +904,11 @@ function renderGame() {
 function updateScoreboard() {
     if (!gameState) return;
 
-    const positions = ['top', 'bottom', 'left', 'right'];
+    var positions = ['top', 'bottom', 'left', 'right'];
 
-    positions.forEach(position => {
-        const scoreElement = document.getElementById('score-' + position);
-        const player = Object.values(gameState.players).find(p => p.position === position);
+    positions.forEach(function(position) {
+        var scoreElement = document.getElementById('score-' + position);
+        var player = Object.values(gameState.players).find(function(p) { return p.position === position; });
 
         if (player) {
             scoreElement.style.display = 'block';
@@ -872,16 +938,16 @@ function updateControls() {
 function displayFinalScores() {
     if (!gameState) return;
 
-    const players = Object.values(gameState.players);
-    players.sort((a, b) => b.score - a.score);
+    var players = Object.values(gameState.players);
+    players.sort(function(a, b) { return b.score - a.score; });
 
     finalScoresDiv.innerHTML = '';
 
-    players.forEach((player, index) => {
-        const scoreItem = document.createElement('div');
+    players.forEach(function(player, index) {
+        var scoreItem = document.createElement('div');
         scoreItem.className = 'final-score-item';
 
-        const isWinner = index === 0;
+        var isWinner = index === 0;
         scoreItem.innerHTML =
             '<span class="player-color" style="background-color: ' + player.color + '; width: 25px; height: 25px; border-radius: 50%;"></span>' +
             '<span>' + escapeHTML(player.name) + ' (' + player.position.toUpperCase() + '): ' + player.score + ' points</span>' +
@@ -905,7 +971,7 @@ function displayFinalScores() {
 
 function getPlayerColor() {
     if (!gameState || !myPosition) return '';
-    const player = Object.values(gameState.players).find(p => p.position === myPosition);
+    var player = Object.values(gameState.players).find(function(p) { return p.position === myPosition; });
     return player ? player.color : '';
 }
 
@@ -917,7 +983,14 @@ function renderLoop() {
     requestAnimationFrame(renderLoop);
 }
 
+// ---- Initialize ----
+if (joinParam) {
+    showScreen('lobby');
+    initAsJoiner(joinParam);
+} else {
+    showScreen('roleSelect');
+}
+
 renderLoop();
 
-// ---- Initialize ----
-initPeer();
+})();
