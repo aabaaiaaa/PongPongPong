@@ -1,16 +1,8 @@
 {
   "name": "4-player-pong",
-  "version": "1.0.0",
-  "description": "Multiplayer ping pong game with up to 4 players",
-  "main": "server.js",
-  "scripts": {
-    "start": "node server.js"
-  },
-  "keywords": ["game", "multiplayer", "pong"],
+  "version": "2.0.0",
+  "description": "Multiplayer ping pong game with up to 4 players - WebRTC P2P, no server required",
+  "keywords": ["game", "multiplayer", "pong", "webrtc"],
   "author": "",
-  "license": "MIT",
-  "dependencies": {
-    "express": "^4.18.2",
-    "socket.io": "^4.6.1"
-  }
+  "license": "MIT"
 }
