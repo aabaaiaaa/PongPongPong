@@ -101,87 +101,11 @@ h2 {
     min-width: 220px;
 }
 
-.role-divider {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-    width: 100%;
-    max-width: 300px;
-    opacity: 0.6;
-    font-size: 0.95em;
-}
-
-.role-divider::before,
-.role-divider::after {
-    content: '';
-    flex: 1;
-    height: 1px;
-    background: rgba(255, 255, 255, 0.4);
-}
-
-.join-input-group {
-    display: flex;
-    gap: 10px;
-    align-items: center;
-}
-
-#roomCodeInput {
-    padding: 12px 16px;
-    font-size: 1.4em;
-    font-weight: bold;
-    text-align: center;
-    letter-spacing: 0.3em;
-    border: 2px solid rgba(255, 255, 255, 0.4);
-    border-radius: 12px;
-    width: 140px;
-    color: #fff;
-    background: rgba(255, 255, 255, 0.15);
-    text-transform: uppercase;
-}
-
-#roomCodeInput::placeholder {
-    color: rgba(255, 255, 255, 0.4);
-    letter-spacing: 0.3em;
-}
-
-#roomCodeInput:focus {
-    outline: none;
-    border-color: rgba(255, 255, 255, 0.8);
-    background: rgba(255, 255, 255, 0.2);
-}
-
-#roomCodeInput.input-error {
-    border-color: #f5576c;
-    animation: shake 0.4s;
-}
-
-@keyframes shake {
-    0%, 100% { transform: translateX(0); }
-    25% { transform: translateX(-6px); }
-    75% { transform: translateX(6px); }
-}
-
-/* Room Code Display */
-#roomCodeSection {
-    margin-bottom: 20px;
-}
-
-.room-code-label {
+.join-hint {
     font-size: 0.95em;
     opacity: 0.7;
-    margin-bottom: 8px;
-}
-
-.room-code {
-    font-size: 3em;
-    font-weight: bold;
-    letter-spacing: 0.4em;
-    padding: 15px 25px;
-    background: rgba(255, 255, 255, 0.15);
-    border-radius: 15px;
-    display: inline-block;
-    font-family: 'Courier New', monospace;
-    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+    max-width: 280px;
+    line-height: 1.4;
 }
 
 /* Lobby Styles */
@@ -471,11 +395,6 @@ button:active {
     .role-subtitle {
         font-size: 1em;
         margin-bottom: 20px;
-    }
-
-    .room-code {
-        font-size: 2.2em;
-        padding: 12px 20px;
     }
 
     .lobby-content {

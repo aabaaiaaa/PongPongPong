@@ -2,8 +2,6 @@
 "use strict";
 
 // ---- Configuration ----
-var PEER_PREFIX = 'pong-';
-var GITHUB_PAGES_URL = 'https://aabaaiaaa.github.io/PongPongPong/';
 var COLORS = ['#FF6B6B', '#4ECDC4', '#FFE66D', '#95E1D3'];
 var POSITIONS = ['top', 'bottom', 'left', 'right'];
 
@@ -13,7 +11,6 @@ var joinParam = params.get('join');
 
 // ---- State ----
 var isHostRole = false;
-var roomCode = null;
 var peer = null;
 var connections = {};
 var hostConn = null;
@@ -29,10 +26,6 @@ var gameScreen = document.getElementById('game');
 var endGameScreen = document.getElementById('endGame');
 
 var hostGameBtn = document.getElementById('hostGameBtn');
-var joinGameBtn = document.getElementById('joinGameBtn');
-var roomCodeInputEl = document.getElementById('roomCodeInput');
-var roomCodeDisplayEl = document.getElementById('roomCodeDisplay');
-var roomCodeSectionEl = document.getElementById('roomCodeSection');
 
 var nameInputSection = document.getElementById('nameInputSection');
 var waitingSection = document.getElementById('waitingSection');
@@ -63,15 +56,6 @@ function escapeHTML(str) {
     return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
-function generateRoomCode() {
-    var chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
-    var code = '';
-    for (var i = 0; i < 4; i++) {
-        code += chars[Math.floor(Math.random() * chars.length)];
-    }
-    return code;
-}
-
 // ---- Initialize Game State (used by host) ----
 function createInitialGameState() {
     return {
@@ -100,17 +84,14 @@ function createInitialGameState() {
 // ---- PeerJS Setup ----
 function initAsHost() {
     isHostRole = true;
-    roomCode = generateRoomCode();
     setConnectionStatus('Connecting...', '');
-    peer = new Peer(PEER_PREFIX + roomCode);
+    peer = new Peer();
 
     peer.on('open', function(id) {
         myPeerId = id;
         setConnectionStatus('Connected', 'connected');
         gameState = createInitialGameState();
         showScreen('lobby');
-        roomCodeDisplayEl.textContent = roomCode;
-        roomCodeSectionEl.style.display = 'block';
         qrSection.style.display = 'block';
         generateQRCode();
         peer.on('connection', handleNewConnection);
@@ -118,12 +99,7 @@ function initAsHost() {
 
     peer.on('error', function(err) {
         console.error('PeerJS error:', err);
-        if (err.type === 'unavailable-id') {
-            setConnectionStatus('Room code taken, please try again', 'error');
-            showScreen('roleSelect');
-        } else {
-            setConnectionStatus('Connection error', 'error');
-        }
+        setConnectionStatus('Connection error', 'error');
     });
 }
 
@@ -158,15 +134,7 @@ function setConnectionStatus(text, className) {
 
 // ---- QR Code Generation ----
 function generateQRCode() {
-    var baseUrl;
-    var proto = window.location.protocol;
-    var hostname = window.location.hostname;
-    if (proto === 'file:' || hostname === 'localhost' || hostname === '127.0.0.1') {
-        baseUrl = GITHUB_PAGES_URL;
-    } else {
-        baseUrl = window.location.origin + window.location.pathname;
-    }
-    var joinUrl = baseUrl + '?join=' + PEER_PREFIX + roomCode;
+    var joinUrl = window.location.origin + window.location.pathname + '?join=' + myPeerId;
 
     // Generate QR code using qrcode-generator
     var qr = qrcode(0, 'M');
@@ -617,28 +585,6 @@ hostGameBtn.addEventListener('click', function() {
     initAsHost();
 });
 
-joinGameBtn.addEventListener('click', function() {
-    var code = roomCodeInputEl.value.trim().toUpperCase();
-    if (code.length !== 4) {
-        roomCodeInputEl.classList.add('input-error');
-        roomCodeInputEl.focus();
-        return;
-    }
-    showScreen('lobby');
-    initAsJoiner(PEER_PREFIX + code);
-});
-
-roomCodeInputEl.addEventListener('input', function() {
-    roomCodeInputEl.value = roomCodeInputEl.value.toUpperCase().replace(/[^A-Z]/g, '');
-    roomCodeInputEl.classList.remove('input-error');
-});
-
-roomCodeInputEl.addEventListener('keypress', function(e) {
-    if (e.key === 'Enter') {
-        joinGameBtn.click();
-    }
-});
-
 // ---- Lobby Event Listeners ----
 joinBtn.addEventListener('click', function() {
     var name = playerNameInput.value.trim() || 'Player ' + Math.floor(Math.random() * 1000);
@@ -764,7 +710,6 @@ function updateUI() {
         showScreen('lobby');
         updatePlayerList();
         if (isHostRole) {
-            roomCodeSectionEl.style.display = 'block';
             qrSection.style.display = 'block';
         }
     } else if (gameState.status === 'playing') {

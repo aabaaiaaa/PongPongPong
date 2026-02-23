@@ -20,11 +20,7 @@
                 <p class="role-subtitle">Up to 4 players &mdash; one on each side!</p>
                 <div class="role-options">
                     <button id="hostGameBtn" class="role-btn">Host Game</button>
-                    <div class="role-divider"><span>or join a friend</span></div>
-                    <div class="join-input-group">
-                        <input type="text" id="roomCodeInput" placeholder="ABCD" maxlength="4" autocomplete="off" spellcheck="false">
-                        <button id="joinGameBtn" class="role-btn">Join</button>
-                    </div>
+                    <p class="join-hint">To join a game, scan the host's QR code or open their shared link.</p>
                 </div>
             </div>
         </div>
@@ -33,12 +29,6 @@
         <div id="lobby" class="screen" style="display: none;">
             <div class="lobby-content">
                 <h2>Game Lobby</h2>
-
-                <!-- Room Code (host only) -->
-                <div id="roomCodeSection" style="display: none;">
-                    <p class="room-code-label">Room Code</p>
-                    <div id="roomCodeDisplay" class="room-code"></div>
-                </div>
 
                 <!-- QR Code Section (host only) -->
                 <div id="qrSection" style="display: none;">
