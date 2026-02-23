@@ -101,11 +101,48 @@ h2 {
     min-width: 220px;
 }
 
-.join-hint {
-    font-size: 0.95em;
-    opacity: 0.7;
-    max-width: 280px;
-    line-height: 1.4;
+.role-btn-secondary {
+    background: linear-gradient(135deg, #4ECDC4 0%, #44a39b 100%);
+    min-width: 220px;
+}
+
+/* Scanner Screen */
+.scanner-content {
+    padding: 20px;
+}
+
+.scanner-hint {
+    opacity: 0.8;
+    margin-bottom: 20px;
+}
+
+.scanner-viewfinder {
+    position: relative;
+    display: inline-block;
+    border-radius: 15px;
+    overflow: hidden;
+    max-width: 100%;
+    margin-bottom: 20px;
+}
+
+#scannerVideo {
+    display: block;
+    max-width: 100%;
+    max-height: 55vh;
+    border-radius: 12px;
+}
+
+.scanner-frame {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 55%;
+    aspect-ratio: 1;
+    border: 3px solid rgba(255, 255, 255, 0.9);
+    border-radius: 12px;
+    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.4);
+    pointer-events: none;
 }
 
 /* Lobby Styles */

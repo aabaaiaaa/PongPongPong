@@ -20,7 +20,7 @@
                 <p class="role-subtitle">Up to 4 players &mdash; one on each side!</p>
                 <div class="role-options">
                     <button id="hostGameBtn" class="role-btn">Host Game</button>
-                    <p class="join-hint">To join a game, scan the host's QR code or open their shared link.</p>
+                    <button id="joinScanBtn" class="role-btn role-btn-secondary">Join Game</button>
                 </div>
             </div>
         </div>
@@ -82,6 +82,20 @@
             </div>
         </div>
 
+        <!-- Scanner Screen -->
+        <div id="scanner" class="screen" style="display: none;">
+            <div class="scanner-content">
+                <h2>Scan QR Code</h2>
+                <p class="scanner-hint">Point your camera at the host's QR code</p>
+                <div class="scanner-viewfinder">
+                    <video id="scannerVideo" playsinline muted></video>
+                    <canvas id="scannerCanvas" style="display: none;"></canvas>
+                    <div class="scanner-frame"></div>
+                </div>
+                <button id="cancelScanBtn">Cancel</button>
+            </div>
+        </div>
+
         <!-- End Game Screen -->
         <div id="endGame" class="screen" style="display: none;">
             <h2>Game Over!</h2>
@@ -94,6 +108,7 @@
 
     <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
     <script src="game.js"></script>
 </body>
 </html>

@@ -24,8 +24,13 @@ var roleSelectScreen = document.getElementById('roleSelect');
 var lobbyScreen = document.getElementById('lobby');
 var gameScreen = document.getElementById('game');
 var endGameScreen = document.getElementById('endGame');
+var scannerScreen = document.getElementById('scanner');
 
 var hostGameBtn = document.getElementById('hostGameBtn');
+var joinScanBtn = document.getElementById('joinScanBtn');
+var cancelScanBtn = document.getElementById('cancelScanBtn');
+var scannerVideo = document.getElementById('scannerVideo');
+var scannerCanvas = document.getElementById('scannerCanvas');
 
 var nameInputSection = document.getElementById('nameInputSection');
 var waitingSection = document.getElementById('waitingSection');
@@ -48,6 +53,10 @@ var qrSection = document.getElementById('qrSection');
 var qrCodeEl = document.getElementById('qrCode');
 var joinUrlEl = document.getElementById('joinUrl');
 var touchControlsEl = document.getElementById('touchControls');
+
+// ---- Scanner State ----
+var scanStream = null;
+var scanInterval = null;
 
 // ---- Key States ----
 var keys = {};
@@ -161,6 +170,63 @@ function generateQRCode() {
             window.getSelection().addRange(range);
         });
     };
+}
+
+// ---- QR Scanner ----
+function startQRScanner() {
+    showScreen('scanner');
+    setConnectionStatus('Waiting for camera...', '');
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+        .then(function(stream) {
+            scanStream = stream;
+            scannerVideo.srcObject = stream;
+            scannerVideo.play();
+            setConnectionStatus('Scanning...', '');
+            scanInterval = setInterval(scanQRFrame, 200);
+        })
+        .catch(function(err) {
+            console.error('Camera error:', err);
+            setConnectionStatus('Camera unavailable', 'error');
+            showScreen('roleSelect');
+        });
+}
+
+function stopQRScanner() {
+    clearInterval(scanInterval);
+    scanInterval = null;
+    if (scanStream) {
+        scanStream.getTracks().forEach(function(t) { t.stop(); });
+        scanStream = null;
+    }
+    scannerVideo.srcObject = null;
+    setConnectionStatus('Ready', '');
+}
+
+function scanQRFrame() {
+    if (scannerVideo.readyState !== scannerVideo.HAVE_ENOUGH_DATA) return;
+
+    scannerCanvas.width = scannerVideo.videoWidth;
+    scannerCanvas.height = scannerVideo.videoHeight;
+    var scanCtx = scannerCanvas.getContext('2d');
+    scanCtx.drawImage(scannerVideo, 0, 0);
+
+    var imageData = scanCtx.getImageData(0, 0, scannerCanvas.width, scannerCanvas.height);
+    var code = jsQR(imageData.data, imageData.width, imageData.height);
+
+    if (code) {
+        var joinId;
+        try {
+            var url = new URL(code.data);
+            joinId = url.searchParams.get('join');
+        } catch (e) {
+            return;
+        }
+        if (joinId) {
+            stopQRScanner();
+            showScreen('lobby');
+            initAsJoiner(joinId);
+        }
+    }
 }
 
 // ---- Host: Handle New Joiner Connection ----
@@ -585,6 +651,15 @@ hostGameBtn.addEventListener('click', function() {
     initAsHost();
 });
 
+joinScanBtn.addEventListener('click', function() {
+    startQRScanner();
+});
+
+cancelScanBtn.addEventListener('click', function() {
+    stopQRScanner();
+    showScreen('roleSelect');
+});
+
 // ---- Lobby Event Listeners ----
 joinBtn.addEventListener('click', function() {
     var name = playerNameInput.value.trim() || 'Player ' + Math.floor(Math.random() * 1000);
@@ -728,6 +803,7 @@ function showScreen(screenName) {
     lobbyScreen.style.display = screenName === 'lobby' ? 'block' : 'none';
     gameScreen.style.display = screenName === 'game' ? 'block' : 'none';
     endGameScreen.style.display = screenName === 'endGame' ? 'block' : 'none';
+    scannerScreen.style.display = screenName === 'scanner' ? 'block' : 'none';
 
     if (screenName === 'game') {
         document.body.classList.add('playing');
