@@ -9,12 +9,13 @@ export default [
       globals: {
         ...globals.browser,
         Peer: "readonly",
-        qrcode: "readonly"
+        qrcode: "readonly",
+        jsQR: "readonly"
       }
     },
     rules: {
       "no-undef": "error",
-      "no-unused-vars": ["error", { vars: "all", args: "none" }],
+      "no-unused-vars": ["error", { vars: "all", args: "none", caughtErrors: "none" }],
       "no-redeclare": "error",
       "no-dupe-keys": "error",
       "no-duplicate-case": "error",
